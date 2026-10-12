@@ -8,13 +8,15 @@
 --  WoW Forever runs the 12.1 engine, so the modern API applies. Presses reach
 --  us two ways:
 --    * Blizzard's own binding commands (ActionButtonDown, MultiActionButtonDown,
---      PetActionButtonDown) -- the stock bars without an action bar addon.
---      These call the action directly and never run the button's click
---      scripts, so they are hooked as functions.
+--      PetActionButtonDown). These call the action directly and never run the
+--      button's click scripts, so they are hooked as functions. EllesmereUI
+--      Action Bars keeps most keys on these native commands too, but its bars
+--      are its own EABButton<slot> frames while Blizzard's twins sit hidden,
+--      so a hidden Blizzard button is mapped to the EllesmereUI button for the
+--      same action slot.
 --    * Clicks -- mouse presses, and keybinds routed through
---      SetOverrideBindingClick. EllesmereUI Action Bars (EABButton<slot>) and
---      Bartender4 dispatch every keybind this way, so a PostClick hook on the
---      button covers both key and mouse for them.
+--      SetOverrideBindingClick (Bartender4; EllesmereUI's custom-paged bars and
+--      Bars 9/10), so a PostClick hook on the button covers both.
 --
 --  Taint-safe: post-hooks only (hooksecurefunc / HookScript), our own flash
 --  frame, and per-button state kept outside the secure button tables.
@@ -43,6 +45,19 @@ local CLICK_BUTTONS = {
     BT4Button = 180,       -- Bartender4
     BT4PetButton = 10,
     BT4StanceButton = 10,
+}
+
+-- EllesmereUI Action Bars names its buttons EABButton<base slot>. Blizzard's
+-- multi bars map to these slot offsets (EllesmereUIActionBars BAR_SLOT_OFFSETS);
+-- the main bar's buttons are EABButton1-12.
+local EAB_MULTIBAR_OFFSET = {
+    MultiBarBottomLeft  = 60,   -- action page 6
+    MultiBarBottomRight = 48,   -- page 5
+    MultiBarRight       = 24,   -- page 3
+    MultiBarLeft        = 36,   -- page 4
+    MultiBar5           = 144,  -- page 13
+    MultiBar6           = 156,  -- page 14
+    MultiBar7           = 168,  -- page 15
 }
 
 -- Per-button state lives outside the (secure) button tables.
@@ -100,7 +115,7 @@ local function CreateFlash()
 end
 
 local function AnimateButton(button)
-    if not button or not flashFrame or not button:IsVisible() then return end
+    if not button or not flashFrame or not button:IsVisible() then return false end
 
     flashFrame:ClearAllPoints()
     flashFrame:SetPoint("TOPLEFT", button, "TOPLEFT", -TEXTURE_OFFSET, TEXTURE_OFFSET)
@@ -108,6 +123,7 @@ local function AnimateButton(button)
 
     flashAnim:Stop()
     flashAnim:Play()
+    return true
 end
 
 --------------------------------------------------------------------------------
@@ -120,12 +136,17 @@ end
 local function OnActionButtonDown(id)
     if not id or InPetBattle() then return end
     local button = GetActionButtonForID and GetActionButtonForID(id) or _G["ActionButton" .. id]
-    AnimateButton(button)
+    if not AnimateButton(button) then
+        AnimateButton(_G["EABButton" .. id])
+    end
 end
 
 local function OnMultiActionButtonDown(bar, id)
     if not bar or not id then return end
-    AnimateButton(_G[bar .. "Button" .. id])
+    if not AnimateButton(_G[bar .. "Button" .. id]) then
+        local offset = EAB_MULTIBAR_OFFSET[bar]
+        if offset then AnimateButton(_G["EABButton" .. (offset + id)]) end
+    end
 end
 
 local function OnPetActionButtonDown(id)
