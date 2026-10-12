@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: |cff0cd29fDanner|rButtonFlash
+## Notes: Flashes an action button when it is pressed. WoW Forever port of jButtonFlash.
+## Author: Danner
+## Version: 1.0
+## X-Category: Action Bars
+## X-Original: jButtonFlash by jwldnr (https://github.com/woldner/jButtonFlash), backport by fondlez
+## OptionalDeps: EllesmereUI, EllesmereUIActionBars, Bartender4
+
+DannerButtonFlash.lua
